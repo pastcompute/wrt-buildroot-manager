@@ -1,0 +1,40 @@
+#
+# wrt-buildroot-manager project file
+#
+
+#
+# Git repository to clone OpenWRT
+#
+CUSTOM_OPENWRT_GIT=https://github.com/openwrt-mirror/openwrt.git
+
+#
+# Git repository branch
+#
+CUSTOM_OPENWRT_GIT_BRANCH=master
+
+#
+# Filename of .config file in project
+#
+CUSTOM_CONFIG=dot.config
+
+#
+# Filename of feeds.conf file in project
+#
+CUSTOM_FEEDS=feeds.conf
+
+#
+# Filename of file containing non-default packages to install from feeds
+#
+CUSTOM_PACKAGES=packages.txt
+
+#
+# Project files/ directory
+#
+CUSTOM_FILES=files/
+
+#
+# Make concurrency
+#
+CUSTOM_MAKE_CONCURRENCY=2
+
+

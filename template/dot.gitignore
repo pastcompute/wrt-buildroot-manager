@@ -1,0 +1,4 @@
+openwrt/
+.feeds.stamp
+.config.stamp
+.config.cache

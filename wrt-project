@@ -1,0 +1,143 @@
+#!/bin/bash
+#
+# WRT Buildroot Manager tool.
+#
+
+set -e
+
+test -d "$WRT_BUILDROOT_DIR" || { echo "Cannot find wrt-buildroot-manager directory! Did you source 'wrt-buildroot-manager.source'?" ; exit 1 ; }
+test -d "$WRT_BUILDROOT_TEMPLATE" || { echo "Cannot find Template directory! Did you source 'wrt-buildroot-manager.source'?" ; exit 1 ; }
+test -e "$PROJECT_FILE"  || { echo "Cannot find $PROJECT_FILE in current directory." ; exit 1 ; }
+
+source "$WRT_BUILDROOT_DIR"/rules.source
+
+#
+# Check sane settings
+#
+function validate_project_file() {
+  test -z "$CUSTOM_OPENWRT_GIT" && { echo "Missing \$CUSTOM_OPENWRT_GIT"; exit 1; }
+  test -z "$CUSTOM_OPENWRT_GIT_BRANCH" && { echo "Missing \$CUSTOM_OPENWRT_GIT_BRANCH"; exit 1; }
+}
+
+#
+# Create a project in the specified directory.
+#
+# $1    Destination directory; created if it does not exist.
+# $2    template=directory option for post merging local overrides
+#
+function do_create() {
+  DEST="$1"
+  mkdir -p "$DEST"
+  cd "$DEST"
+  cp -v "$WRT_BUILDROOT_TEMPLATE"/* .
+
+  TEMPLATE="${2##template=}"
+  test -z "$TEMPLATE" && return
+  test -d "$TEMPLATE" || { echo "Warning: local Template directory not found! Not merging local overrides."; return; }
+
+  # Initially, do a dumb merge:  just copy user template over the top.
+  cp -v "$TEMPLATE"/* .
+
+  # Rename special files
+  mv -v dot.gitignore .gitignore
+}
+
+#
+# Clone OpenWRT if not already cloned.
+# Silently ignore if directory exists even if it is not a git repository (assume user knows what they are doing)
+#
+function do_clone_openwrt() {
+	if ! test -d "$OPENWRT_ROOT" ; then
+	  git clone "$CUSTOM_OPENWRT_GIT" "$OPENWRT_ROOT"
+	  (cd "$OPENWRT_ROOT" && git checkout "$CUSTOM_OPENWRT_GIT_BRANCH")
+  fi
+}
+
+#
+# Setup package feeds.
+# If no CUSTOM_FEEDS exists, will use OpenWRT defaults
+# Assumes packages have no spaces in names
+#
+function do_feeds() {
+  if ! -e .feeds.stamp ; then
+    test -e "$CUSTOM_FEEDS" && cp "$CUSTOM_FEEDS" "$OPENWRT_ROOT"/feeds.conf
+    cd "$OPENWRT_ROOT" && scripts/feeds update
+    cd "$OPENWRT_ROOT" && scripts/feeds install `cat $CUSTOM_PACKAGES`
+    touch .feeds.stamp
+  fi
+}
+
+#
+# Prepare project dot.config
+#
+function do_config() {
+  if ! -e .config.stamp ; then
+    test -e "$CUSTOM_CONFIG" && cp "$CUSTOM_CONFIG" "$OPENWRT_ROOT"/.config
+    cd "$OPENWRT_ROOT" && make defconfig
+    cp "$OPENWRT_ROOT"/.config .config.cache
+    touch .config.stamp
+  fi
+}
+
+#
+# Make the world
+#
+function do_world() {
+  cd "$OPENWRT_ROOT" && make ${CUSTOM_MAKE_CONCURRENCY:+-j$CUSTOM_MAKE_CONCURRENCY}
+}
+
+#
+# Build a project in the current directory.
+#
+# This _could_ have been done using Makefiles. But the intention is to really be a straight-line process.
+# OpenWRT itself uses Makefiles and we leverage that when needed.
+# Also I would like to make this file understandable to a casual user.
+#
+function do_create() {
+  DIR=`pwd`
+
+  source "$PROJECT_FILE" && validate_project_file
+
+  do_clone_openwrt
+  do_feeds
+  do_config
+	do_world
+}
+
+#
+# Clean files causing a complete rebuild
+#
+function do_clean() {
+  DIR=`pwd`
+
+  source "$PROJECT_FILE" && validate_project_file
+
+	rm .feeds.stamp
+	rm .config.stamp
+  rm "$OPENWRT_ROOT"/feeds.conf
+}
+
+#
+# Main command logic.
+#
+
+VERB="$1"
+
+case "$VERB" in
+create)
+  shift
+  do_create "${@}"
+  ;;
+
+build)
+  shift
+  do_build "${@}"
+  ;;
+
+clean)
+  shift
+  do_clean "${@}"
+  ;;
+
+esac
+

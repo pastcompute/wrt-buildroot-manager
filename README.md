@@ -47,6 +47,7 @@ the PATH and fetches the WBM code from git as needed.
 ###Installation
 
     git clone path/to/wbm/repo wrt-buildroot-manager
+    path/to/wrt-buildroot-manager/configure.sh
 
 ###To start a session (for regular use, recommend this be added to your bashrc/profile)
 
@@ -57,6 +58,7 @@ This will add `wrt-project` to your PATH and set any other necessary environment
 ###Creating a new WBM project
 
     wrt-project create path/to/project-dir
+    cd path/to/project-dir
     wrt-project build 
 
 The new directory `project-dir` is created with a new git repository and the following files:

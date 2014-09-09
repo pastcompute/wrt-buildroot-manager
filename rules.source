@@ -1,0 +1,6 @@
+#
+# Additional rules
+#
+
+PROJECT_FILE=custom.project
+OPENWRT_ROOT=openwrt
