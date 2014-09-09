@@ -2,7 +2,10 @@
 #
 # WRT Buildroot Manager tool.
 #
+# Not yet implemented: patches & quilt; kernel; uClibc menuconfig; .config tracking ; vendor kernel selection
+#
 
+# Fail fast.
 set -e
 
 test -d "$WRT_BUILDROOT_DIR" || { echo "Cannot find wrt-buildroot-manager directory! Did you source 'wrt-buildroot-manager.source'?" ; exit 1 ; }
@@ -14,7 +17,7 @@ source "$WRT_BUILDROOT_DIR"/rules.source
 # Check project
 #
 function validate_project_file() {
-	test -e "$PROJECT_FILE"  || { echo "Cannot find $PROJECT_FILE in current directory." ; exit 1 ; }
+  test -e "$PROJECT_FILE"  || { echo "Cannot find $PROJECT_FILE in current directory." ; exit 1 ; }
 }
 
 #
@@ -23,23 +26,30 @@ function validate_project_file() {
 function validate_project_settings() {
   test -z "$CUSTOM_OPENWRT_GIT" && { echo "Missing \$CUSTOM_OPENWRT_GIT"; exit 1; }
   test -z "$CUSTOM_OPENWRT_GIT_BRANCH" && { echo "Missing \$CUSTOM_OPENWRT_GIT_BRANCH"; exit 1; }
-	true
+  true
 }
 
 #
 # Create a project in the specified directory.
 #
 # $1    Destination directory; created if it does not exist.
-# $2    template=directory option for post merging local overrides
+# $2..n Options: --no-git
+# $n+1  template=directory option for post merging local overrides
 #
 function do_create() {
   DEST="$1"
-	test -z "$1" && { echo "Missing destination argument."; exit 1; }
+  test -z "$1" && { echo "Missing destination argument."; exit 1; }
   mkdir -p "$DEST"
+  shift
+
+  NO_GIT=0
+  # TODO - this needs to become a loop
+  if [ "$1" == "--no-git" ] ; then NO_GIT=1 ; fi
+
   cd "$DEST"
   cp -v "$WRT_BUILDROOT_TEMPLATE"/* .
 
-  TEMPLATE="${2##template=}"
+  TEMPLATE="${1##template=}"
   test -z "$TEMPLATE" || test -d "$TEMPLATE" || { echo "Warning: local Template directory not found! Not merging local overrides."; }
 
   # Initially, do a dumb merge:  just copy user template over the top.
@@ -51,11 +61,14 @@ function do_create() {
   # Now by default create a git repository
   # If one exists, script should die because of `set -e`
 
-	echo "Project created `date`" > README.md
+  echo "Project created `date`" > README.md
 
-	git init
-  git add -A
-  git commit -m "Initial."
+  # User may have this as a subdirectory of another git repository and not want do do this
+  if [ $NO_GIT -eq 0 ] ; then
+    git init
+    git add -A
+    git commit -m "Initial."
+  fi
 }
 
 #
@@ -63,9 +76,9 @@ function do_create() {
 # Silently ignore if directory exists even if it is not a git repository (assume user knows what they are doing)
 #
 function do_clone_openwrt() {
-	if ! test -d "$OPENWRT_ROOT" ; then
-	  git clone "$CUSTOM_OPENWRT_GIT" "$OPENWRT_ROOT"
-	  (cd "$OPENWRT_ROOT" && git checkout "$CUSTOM_OPENWRT_GIT_BRANCH")
+  if ! test -d "$OPENWRT_ROOT" ; then
+    git clone "$CUSTOM_OPENWRT_GIT" "$OPENWRT_ROOT"
+    (cd "$OPENWRT_ROOT" && git checkout "$CUSTOM_OPENWRT_GIT_BRANCH")
   fi
 }
 
@@ -96,6 +109,17 @@ function do_config() {
 }
 
 #
+# Copy files/
+#
+function do_files() {
+  test -z "$CUSTOM_FILES" && return 0
+  test -d "$CUSTOM_FILES" || return 0
+
+  # Reminder on correct placement of slashes on each argument
+  rsync -av "$CUSTOM_FILES" "$OPENWRT_ROOT"/files
+}
+
+#
 # Make the world
 #
 function do_world() {
@@ -112,13 +136,29 @@ function do_world() {
 function do_build() {
   DIR=`pwd`
 
-	validate_project_file
+  validate_project_file
   source "$PROJECT_FILE" && validate_project_settings
 
   do_clone_openwrt
   do_feeds
   do_config
-	do_world
+  # FIXME - refresh config
+  do_files
+  do_world
+}
+
+#
+# Make a project in the current directory.
+#
+function do_make() {
+  DIR=`pwd`
+
+  validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
+
+  # FIXME - refresh config
+  do_files
+  do_world
 }
 
 #
@@ -127,11 +167,23 @@ function do_build() {
 function do_clean() {
   DIR=`pwd`
 
-	validate_project_file
+  validate_project_file
   source "$PROJECT_FILE" && validate_project_settings
 
-	rm -fv .feeds.stamp .config.stamp \
-		 "$OPENWRT_ROOT"/feeds.conf "$OPENWRT_ROOT"/.config "$OPENWRT_ROOT"/.config.old
+  rm -fv .feeds.stamp .config.stamp \
+     "$OPENWRT_ROOT"/feeds.conf "$OPENWRT_ROOT"/.config "$OPENWRT_ROOT"/.config.old
+}
+
+#
+# Clean everything
+#
+function do_distclean() {
+  DIR=`pwd`
+
+  validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
+
+	(cd "$OPENWRT_ROOT" && git clean -x -f d )
 }
 
 #
@@ -151,15 +203,26 @@ build)
   do_build "${@}"
   ;;
 
+make)
+  shift
+  do_make "${@}"
+  ;;
+
 clean)
   shift
   do_clean "${@}"
   ;;
 
+distclean)
+  shift
+  do_distclean "${@}"
+  ;;
+
 *)
-	cat <<EOF
-wrt-project create path/to/directory
+  cat <<EOF
+wrt-project create path/to/directory [--no-git] [template=path/to/override/dir]
 wrt-project build
+wrt-project make
 wrt-project clean
 wrt-project distclean
 EOF

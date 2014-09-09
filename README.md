@@ -66,6 +66,13 @@ The new directory `project-dir` is created with a new git repository and the fol
 * custom.project
 * .gitignore
 * bootstrap.sh
+* dot.config
+* README.md
+
+The following additional files are not created initially but are used in the build process if present:
+
+* feeds.conf
+* files/*
 
 In the future it would be desirable to use a Kconfig like mechanism to provide a nice user interface.
 For the time being, open `custom.project` in a text editor and tune as desired.
@@ -74,9 +81,15 @@ The file `bootstrap.sh` is provided as a convenience for downloading wrt-buildro
 don't have it yet.
 
 If you have to create a lot of projects that have a similar core of options, you can set a template for
-custom.project. This is merged over the default `custom.project` with the template taking precedence.
+custom.project files. This is merged over the default `custom.project` with the template taking precedence.
 
-    wrt-project create template=path/to/template/file
+    wrt-project create template=path/to/template/dir
+
+To avoid init'ing a git repository - useful if you have multiple projects inside one top level git repository -
+
+    wrt-project create --no-git
+    # or
+    wrt-project create --no-git template=path/to/template/dir
 
 ###To start using an existing WBM project
 
@@ -113,6 +126,8 @@ The 'make' command assumes most things are as they should be and just does:
 
 ##WRT Updates (Security)
 
+_not yet implemented_
+
 It is recommended initially to track Barrier Breaker (*stable, at time of preparation) before experimenting 
 with trunk.
 
@@ -142,6 +157,9 @@ By default, the OpenWRT package feeds will be restricted to the core set of pack
 You can enable a feeds.conf file by simply setting `CUSTOM_FEEDS`  in `custom.project` and ensuring it exists
 in the project directory. Additional packages can be installed from feeds via `CUSTOM_PACKAGES`.
 
+Like making a local clone of OpenWRT it can also be useful to locally clone the various packages repositories
+and use file:// URI in the feeds.conf file. 
+
 ###Custom image files
 
 The directory `files/` if present is copied to `openwrt/files` and merged into the firmware image as per normal
@@ -153,6 +171,8 @@ If you ran `git status` in `openwrt` you may well see a lot of diffs. By design 
 unless you are actually developing on OpenWRT itself. (See Patches.)
 
 ###Patches
+
+_not yet implemented_
 
 Patches are a little tricky, because some might need to be applied at different stages. Also this needs to be
 synchronised with updates to the OpenWRT source (rebasing, anyone?)
@@ -194,12 +214,16 @@ The usual time to do 'patch-wizard-prepare' would be after a build before you st
 
 ###Manual configuration
 
+_not yet implemented_
+
     wrt-project config
 
 This will run `make menuconfig` and attempt to collect just changes back as appended to $(CUSTOM_CONFIG)
 (This is a work in progress, because unlike 'buildroot', the OpenWRT project has no `make savedefconfig`)
 
 ###Kernel configuration
+
+_not yet implemented_
 
 Until used, the OpenWRT supplied kernel config is used by the build.
 
@@ -220,10 +244,17 @@ Also, remember the interaction in OpenWRT between devices and kmod packages when
 
 ###uClibC configuration (advanced)
 
+_not yet implemented_
+
 This will build the system to the point that uClibc is unpacked, then run the uClibc Kconfig and capture the
 patches back to `patches/uClibc`
 
 ###Vendor kernel
+
+It can be useful to want to use a GPL source kernel with a OpenWRT user space, especially for a device not yet
+ported.
+
+_not yet implemented_
 
 FIXME Instructions for modifying the configuration to do this
 
@@ -231,19 +262,27 @@ FIXME Instructions for modifying the configuration to do this
 
 This operation will cause a 'build' to 'do' everything again (except Internet downloads)
 
-    wrt-project wrt-clean
+    wrt-project clean
 
 This removes the following:
 
 * all .stamp files
 * .config.cache
 * openwrt/feeds.conf
-* openwrt/.config
+* openwrt/.config{.old}
 * openwrt/files
 
 It also runs:
 
 * WRT scripts/feeds clean
+
+To really clean everything:
+
+    wrt-project distclean
+
+which additionally runs:
+
+* In the openwrt/ directory: `git clean -x -f -d`
 
 ##Internals
 
@@ -264,6 +303,8 @@ The config file used to seed defconfig is specified in custom.project
     wrt-project build
 
 The 'build' command will do the following when invoked:
+
+_not yet implemented_
 
 * compare openwrt/.config with .config.cache
 ** if present, and different (either you have manually edited or manually run `make menuconfig`) will halt
@@ -287,6 +328,8 @@ item.  For example, if you try and set `CONFIG_BUILD_LOG` without also setting `
 
 To assist in resolving manual edits, which cause 'build' to halt early:
 
+_not yet implemented_
+
     wrt-project config-mergetool
 
 This will:
@@ -304,8 +347,6 @@ Doing this will mitigate chances for loss of human-edited changes.
 OpenWRT Kconfig mechanism and append best guess at missing dependencies to $(CUSTOM_CONFIG), with change
 rules as above
 
-
-
 ###The custom.project file
 
     CUSTOM_OPENWRT_GIT         # <-- Git repository to clone OpenWRT
@@ -320,9 +361,18 @@ rules as above
 
 ###Using git
 
+_todo_
+
 ###Using git-annex and a download cache directory
+
+_todo_
 
 ###Managing patch sets against different openwrt versions
 
+_todo_
+
 ###Colocated package feed
+
+_todo_
+
 
