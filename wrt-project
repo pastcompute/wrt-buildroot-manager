@@ -7,16 +7,23 @@ set -e
 
 test -d "$WRT_BUILDROOT_DIR" || { echo "Cannot find wrt-buildroot-manager directory! Did you source 'wrt-buildroot-manager.source'?" ; exit 1 ; }
 test -d "$WRT_BUILDROOT_TEMPLATE" || { echo "Cannot find Template directory! Did you source 'wrt-buildroot-manager.source'?" ; exit 1 ; }
-test -e "$PROJECT_FILE"  || { echo "Cannot find $PROJECT_FILE in current directory." ; exit 1 ; }
 
 source "$WRT_BUILDROOT_DIR"/rules.source
 
 #
-# Check sane settings
+# Check project
 #
 function validate_project_file() {
+	test -e "$PROJECT_FILE"  || { echo "Cannot find $PROJECT_FILE in current directory." ; exit 1 ; }
+}
+
+#
+# Check sane settings
+#
+function validate_project_settings() {
   test -z "$CUSTOM_OPENWRT_GIT" && { echo "Missing \$CUSTOM_OPENWRT_GIT"; exit 1; }
   test -z "$CUSTOM_OPENWRT_GIT_BRANCH" && { echo "Missing \$CUSTOM_OPENWRT_GIT_BRANCH"; exit 1; }
+	true
 }
 
 #
@@ -27,19 +34,28 @@ function validate_project_file() {
 #
 function do_create() {
   DEST="$1"
+	test -z "$1" && { echo "Missing destination argument."; exit 1; }
   mkdir -p "$DEST"
   cd "$DEST"
   cp -v "$WRT_BUILDROOT_TEMPLATE"/* .
 
   TEMPLATE="${2##template=}"
-  test -z "$TEMPLATE" && return
-  test -d "$TEMPLATE" || { echo "Warning: local Template directory not found! Not merging local overrides."; return; }
+  test -z "$TEMPLATE" || test -d "$TEMPLATE" || { echo "Warning: local Template directory not found! Not merging local overrides."; }
 
   # Initially, do a dumb merge:  just copy user template over the top.
-  cp -v "$TEMPLATE"/* .
+  test -d "$TEMPLATE" && cp -v "$TEMPLATE"/* .
 
   # Rename special files
   mv -v dot.gitignore .gitignore
+
+  # Now by default create a git repository
+  # If one exists, script should die because of `set -e`
+
+	echo "Project created `date`" > README.md
+
+	git init
+  git add -A
+  git commit -m "Initial."
 }
 
 #
@@ -59,10 +75,10 @@ function do_clone_openwrt() {
 # Assumes packages have no spaces in names
 #
 function do_feeds() {
-  if ! -e .feeds.stamp ; then
+  if ! test -e .feeds.stamp ; then
     test -e "$CUSTOM_FEEDS" && cp "$CUSTOM_FEEDS" "$OPENWRT_ROOT"/feeds.conf
-    cd "$OPENWRT_ROOT" && scripts/feeds update
-    cd "$OPENWRT_ROOT" && scripts/feeds install `cat $CUSTOM_PACKAGES`
+    ( cd "$OPENWRT_ROOT" && scripts/feeds update )
+    ( cd "$OPENWRT_ROOT" && test -e "$CUSTOM_PACKAGES" && scripts/feeds install `cat "$CUSTOM_PACKAGES"` ) || true
     touch .feeds.stamp
   fi
 }
@@ -71,9 +87,9 @@ function do_feeds() {
 # Prepare project dot.config
 #
 function do_config() {
-  if ! -e .config.stamp ; then
+  if ! test -e .config.stamp ; then
     test -e "$CUSTOM_CONFIG" && cp "$CUSTOM_CONFIG" "$OPENWRT_ROOT"/.config
-    cd "$OPENWRT_ROOT" && make defconfig
+    ( cd "$OPENWRT_ROOT" && make defconfig )
     cp "$OPENWRT_ROOT"/.config .config.cache
     touch .config.stamp
   fi
@@ -93,10 +109,11 @@ function do_world() {
 # OpenWRT itself uses Makefiles and we leverage that when needed.
 # Also I would like to make this file understandable to a casual user.
 #
-function do_create() {
+function do_build() {
   DIR=`pwd`
 
-  source "$PROJECT_FILE" && validate_project_file
+	validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
 
   do_clone_openwrt
   do_feeds
@@ -110,11 +127,11 @@ function do_create() {
 function do_clean() {
   DIR=`pwd`
 
-  source "$PROJECT_FILE" && validate_project_file
+	validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
 
-	rm .feeds.stamp
-	rm .config.stamp
-  rm "$OPENWRT_ROOT"/feeds.conf
+	rm -fv .feeds.stamp .config.stamp \
+		 "$OPENWRT_ROOT"/feeds.conf "$OPENWRT_ROOT"/.config "$OPENWRT_ROOT"/.config.old
 }
 
 #
@@ -137,6 +154,15 @@ build)
 clean)
   shift
   do_clean "${@}"
+  ;;
+
+*)
+	cat <<EOF
+wrt-project create path/to/directory
+wrt-project build
+wrt-project clean
+wrt-project distclean
+EOF
   ;;
 
 esac
