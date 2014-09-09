@@ -6,6 +6,8 @@ concurrently.
 
 It should also work with OpenWRT forks such as [CeroWRT](https://github.com/dtaht/cerowrt-3.10).
 
+For an example, see https://github.com/pastcompute/wrt-buildroot-manager .
+
 ###Features
 
 * Maintain a clean dot config seed file
@@ -209,8 +211,6 @@ This works as follows.
 * Generate a patch from the git difference
 
 The usual time to do 'patch-wizard-prepare' would be after a build before you start hacking.
-
-<FUTURE ENHANCEMENT:>Integrate / automate quilt
 
 ###Manual configuration
 

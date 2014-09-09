@@ -9,6 +9,8 @@ set -e
 
 git clone http://github.com/pastcompute/wrt-buildroot-manager
 
+wrt-buildroot-manager/configure.sh
+
 source  wrt-buildroot-manager/wrt-buildroot-manager.source
 
 wrt-project build
