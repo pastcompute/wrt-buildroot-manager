@@ -13,6 +13,8 @@ test -d "$WRT_BUILDROOT_TEMPLATE" || { echo "Cannot find Template directory! Did
 
 source "$WRT_BUILDROOT_DIR"/rules.source
 
+TOP_DIR=`pwd`
+
 #
 # Check project
 #
@@ -120,10 +122,22 @@ function do_files() {
 }
 
 #
+# Apply kernel patches
+#
+# Currently these are git patches against the openwrt tree which just happen to be for the kernel
+# So this will currently apply them everywhere...
+#
+function do_kernel_patches() {
+  # Remove & reapply, without mercy
+	rm -rf "$OPENWRT_ROOT/patches" "$OPENWRT_ROOT/.pc"
+  ( cd "$OPENWRT_ROOT" && quilt import "$TOP_DIR/patches/kernel" && quilt push -a )
+}
+
+#
 # Make the world
 #
 function do_world() {
-  cd "$OPENWRT_ROOT" && make ${CUSTOM_MAKE_CONCURRENCY:+-j$CUSTOM_MAKE_CONCURRENCY}
+  ( cd "$OPENWRT_ROOT" && make ${CUSTOM_MAKE_CONCURRENCY:+-j$CUSTOM_MAKE_CONCURRENCY} )
 }
 
 #
@@ -144,6 +158,7 @@ function do_build() {
   do_config
   # FIXME - refresh config
   do_files
+  do_kernel_patches
   do_world
 }
 
