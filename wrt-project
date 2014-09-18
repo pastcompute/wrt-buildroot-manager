@@ -188,6 +188,19 @@ function do_make() {
   do_world
 }
 
+function do_configup {
+  DIR=`pwd`
+
+  validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
+	cp dot.config "$OPENWRT_ROOT"/.config
+	cd "$OPENWRT_ROOT" && make defconfig && make -j4
+}
+
+#
+# For more advanced stuff (recompiling things) need to jump in manually still
+#
+
 #
 # Clean files causing a complete rebuild
 #
@@ -228,6 +241,11 @@ create)
 build)
   shift
   do_build "${@}"
+  ;;
+
+configup)
+  shift
+  do_configup "${@}"
   ;;
 
 make)
