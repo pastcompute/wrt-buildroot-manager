@@ -132,9 +132,16 @@ function do_files() {
 # So this will currently apply them everywhere...
 #
 function do_kernel_patches() {
-  # Remove & reapply, without mercy
-	rm -rf "$OPENWRT_ROOT/patches" "$OPENWRT_ROOT/.pc"
-  ( cd "$OPENWRT_ROOT" && quilt import "$TOP_DIR/patches/kernel" && quilt push -a )
+  # Remove & reapply.
+
+	# HOW DO WE HANDLE CHANGES MID_STREAM? use git reset / git checkout ?
+	#QUILT_PATCHES="$TOP_DIR/patches/kernel" quilt pop -a
+	#QUILT_PATCHES="$TOP_DIR/patches/kernel" quilt push -a
+
+  # Or use import so we can flush them
+	test ! -e "$TOP_DIR/patches/kernel/series" && return
+  ( cd "$OPENWRT_ROOT" ; test -d patches && quilt pop -a ) || true
+  ( cd "$OPENWRT_ROOT" ; rm -rf patches .pc ; QUILT_PATCHES="$TOP_DIR/patches/kernel" quilt push -a )
 }
 
 #
@@ -177,6 +184,7 @@ function do_make() {
 
   # FIXME - refresh config
   do_files
+  do_kernel_patches
   do_world
 }
 
