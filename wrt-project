@@ -4,6 +4,10 @@
 #
 # Not yet implemented: patches & quilt; kernel; uClibc menuconfig; .config tracking ; vendor kernel selection
 #
+# This doesnt replace `make target/linux` or the many other targets for hardcore development, wrt-project
+# does simplfy management of extended build profiles and sharing with other systems
+#
+
 
 # Fail fast.
 set -e
