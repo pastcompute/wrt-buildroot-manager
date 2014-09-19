@@ -7,7 +7,9 @@
 # This doesnt replace `make target/linux` or the many other targets for hardcore development, wrt-project
 # does simplfy management of extended build profiles and sharing with other systems
 #
-
+#
+# This file needs to become a wrapper that calls `make` around the logic of this file
+#
 
 # Fail fast.
 set -e
