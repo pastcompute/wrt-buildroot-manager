@@ -228,6 +228,22 @@ function do_distclean() {
 	(cd "$OPENWRT_ROOT" && git clean -x -f d )
 }
 
+function do_checksec() {
+	# If https://github.com/pastcompute/checksec.sh has been cloned into the WBM code directory then run it over most recent WRT rootfs
+  DIR=`pwd`
+
+  validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
+
+	test -e "$WRT_BUILDROOT_DIR"/checksec.sh/checksec.sh
+
+	# cd openwrt/staging_dir/target-mips_34kc_uClibc-0.9.33.2/root-ar71xx
+	STAGING_DIR_ROOT=`make -C "$OPENWRT_ROOT" --no-print-directory  var.STAGING_DIR_ROOT V=s`
+	eval STAGING_DIR_ROOT=${STAGING_DIR_ROOT#STAGING_DIR_ROOT=}
+
+	cd "$STAGING_DIR_ROOT" && for p in lib usr/lib sbin usr/sbin bin usr/bin ; do "$WRT_BUILDROOT_DIR"/checksec.sh/checksec.sh --dir $p ; done
+}
+
 #
 # Main command logic.
 #
@@ -264,6 +280,11 @@ distclean)
   shift
   do_distclean "${@}"
   ;;
+
+checksec)
+	shift
+  do_checksec "${@}"
+	;;
 
 *)
   cat <<EOF
