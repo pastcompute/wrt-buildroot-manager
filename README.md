@@ -373,6 +373,30 @@ _todo_
 
 ###Colocated package feed
 
-_todo_
+* make a fresh OpenWRT clone somewhere with all feeds enabled
+* make prereq
+* add feeds
+* scripts/feeds update
+* then, clone the relevant feed somewhere locally safe
+** i.e. clone from ./feeds/packages --> elsewhere/packages
+* ref that from your feeds.conf
 
+e.g. another way:
+
+    git clone https://github.com/openwrt/packages.git elsewhere/wrt-packages-1407
+    cd elsewhere/wrt-packages-1407
+    git checkout for-14.07
+
+then in feeds.conf:
+
+    src-git packages file:///scratch/develop/wrt-feeds/wrt-packages-1407;for-14.07
+
+
+Refreshing kernel patches:
+
+fails: QUILT_PATCHES=../patches/kernel quilt push
+dont do: QUILT_PATCHES=../patches/kernel quilt pop
+use: QUILT_PATCHES=../patches/kernel quilt push -f
+make kernel_menuconfig, then
+QUILT_PATCHES=../patches/kernel quilt refresh
 
