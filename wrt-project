@@ -214,8 +214,12 @@ function do_clean() {
   validate_project_file
   source "$PROJECT_FILE" && validate_project_settings
 
-  rm -fv .feeds.stamp .config.stamp \
-     "$OPENWRT_ROOT"/feeds.conf "$OPENWRT_ROOT"/.config "$OPENWRT_ROOT"/.config.old
+	( cd "$OPENWRT_ROOT" && make clean toolchain/clean )
+
+  rm -frv .feeds.stamp .config.stamp \
+     	"$OPENWRT_ROOT"/feeds.conf "$OPENWRT_ROOT"/.config "$OPENWRT_ROOT"/.config.old \
+			"$OPENWRT_ROOT"/staging_dir/toolchain* "$OPENWRT_ROOT"/staging_dir/target* \
+			"$OPENWRT_ROOT"/build_dir/toolchain* "$OPENWRT_ROOT"/build_dir/target*
 }
 
 #
