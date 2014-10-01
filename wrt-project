@@ -97,7 +97,9 @@ function do_clone_openwrt() {
 #
 function do_feeds() {
   if ! test -e .feeds.stamp ; then
-    test -e "$CUSTOM_FEEDS" && cp "$CUSTOM_FEEDS" "$OPENWRT_ROOT"/feeds.conf
+		validate_project_file
+		source "$PROJECT_FILE" && validate_project_settings
+    test -e "$CUSTOM_FEEDS" && sed 's!@WRTPROJECT@!'`pwd`'!g' "$CUSTOM_FEEDS" > "$OPENWRT_ROOT"/feeds.conf
     ( cd "$OPENWRT_ROOT" && scripts/feeds update )
     ( cd "$OPENWRT_ROOT" && test -e "$CUSTOM_PACKAGES" && scripts/feeds install `cat "$CUSTOM_PACKAGES"` ) || true
     touch .feeds.stamp
@@ -266,6 +268,11 @@ configup)
   do_configup "${@}"
   ;;
 
+feedsup)
+  shift
+  do_feeds "${@}"
+  ;;
+
 make)
   shift
   do_make "${@}"
@@ -298,3 +305,4 @@ EOF
 
 esac
 
+# scripts/feeds update customfeed
