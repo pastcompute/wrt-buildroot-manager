@@ -96,12 +96,14 @@ function do_clone_openwrt() {
 # Assumes packages have no spaces in names
 #
 function do_feeds() {
-  if ! test -e .feeds.stamp ; then
+  if test ! -e .feeds.stamp -o x${FORCE} == xYES ; then
 		validate_project_file
 		source "$PROJECT_FILE" && validate_project_settings
     test -e "$CUSTOM_FEEDS" && sed 's!@WRTPROJECT@!'`pwd`'!g' "$CUSTOM_FEEDS" > "$OPENWRT_ROOT"/feeds.conf
     ( cd "$OPENWRT_ROOT" && scripts/feeds update )
-    ( cd "$OPENWRT_ROOT" && test -e "$CUSTOM_PACKAGES" && scripts/feeds install `cat "$CUSTOM_PACKAGES"` ) || true
+    local _pkg=`readlink -f "$CUSTOM_PACKAGES"`
+    ( cd "$OPENWRT_ROOT" && test -e "$_pkg" && scripts/feeds install `grep -v '^#' "$_pkg"` ) || true
+    ( cd "$OPENWRT_ROOT" && scripts/feeds install -p hello )  #fixme
     touch .feeds.stamp
   fi
 }
@@ -110,11 +112,14 @@ function do_feeds() {
 # Prepare project dot.config
 #
 function do_config() {
-  if ! test -e .config.stamp ; then
-    test -e "$CUSTOM_CONFIG" && cp "$CUSTOM_CONFIG" "$OPENWRT_ROOT"/.config
+  if test ! -e .config.stamp -o x${FORCE} == xYES ; then
+    test -e "$CUSTOM_CONFIG" && cp -v "$CUSTOM_CONFIG" "$OPENWRT_ROOT"/.config
     ( cd "$OPENWRT_ROOT" && make defconfig )
     cp "$OPENWRT_ROOT"/.config .config.cache
     touch .config.stamp
+  else
+    echo "SKIPPING do_config: if you have changed your openwrt source, you may want to remove .config.stamp"
+    sleep 1
   fi
 }
 
@@ -122,11 +127,13 @@ function do_config() {
 # Copy files/
 #
 function do_files() {
+	validate_project_file
+	source "$PROJECT_FILE" && validate_project_settings
   test -z "$CUSTOM_FILES" && return 0
   test -d "$CUSTOM_FILES" || return 0
 
   # Reminder on correct placement of slashes on each argument
-  rsync -av "$CUSTOM_FILES" "$OPENWRT_ROOT"/files
+  rsync -av --delete "$CUSTOM_FILES" "$OPENWRT_ROOT"/files
 }
 
 #
@@ -145,7 +152,8 @@ function do_kernel_patches() {
   # Or use import so we can flush them
 	test ! -e "$TOP_DIR/patches/kernel/series" && return
   ( cd "$OPENWRT_ROOT" ; test -d patches && quilt pop -a ) || true
-  ( cd "$OPENWRT_ROOT" ; rm -rf patches .pc ; QUILT_PATCHES="$TOP_DIR/patches/kernel" quilt push -a )
+  # Need to detect difference between 'no patches in series' and errors...
+  ( cd "$OPENWRT_ROOT" ; rm -rf patches .pc ; QUILT_PATCHES="$TOP_DIR/patches/kernel" quilt push -a ) || true
 }
 
 #
@@ -198,7 +206,7 @@ function do_configup {
   validate_project_file
   source "$PROJECT_FILE" && validate_project_settings
 	cp dot.config "$OPENWRT_ROOT"/.config
-	cd "$OPENWRT_ROOT" && make defconfig && make -j4
+	cd "$OPENWRT_ROOT" && make defconfig #&& make -j4
 }
 
 #
@@ -247,7 +255,7 @@ function do_checksec() {
 	STAGING_DIR_ROOT=`make -C "$OPENWRT_ROOT" --no-print-directory  var.STAGING_DIR_ROOT V=s`
 	eval STAGING_DIR_ROOT=${STAGING_DIR_ROOT#STAGING_DIR_ROOT=}
 
-	cd "$STAGING_DIR_ROOT" && for p in lib usr/lib sbin usr/sbin bin usr/bin ; do "$WRT_BUILDROOT_DIR"/checksec.sh/checksec.sh --dir $p ; done
+	cd "$STAGING_DIR_ROOT" && for p in lib usr/lib sbin usr/sbin bin usr/bin usr/local/bin ; do "$WRT_BUILDROOT_DIR"/checksec.sh/checksec.sh --dir $p ; done
 }
 
 #
@@ -275,6 +283,11 @@ configup)
 feedsup)
   shift
   do_feeds "${@}"
+  ;;
+
+filesup)
+  shift
+  do_files "${@}"
   ;;
 
 make)
