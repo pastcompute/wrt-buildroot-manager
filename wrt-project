@@ -205,7 +205,7 @@ function do_configup {
 
   validate_project_file
   source "$PROJECT_FILE" && validate_project_settings
-	cp dot.config "$OPENWRT_ROOT"/.config
+	cp "$CUSTOM_CONFIG" "$OPENWRT_ROOT"/.config
 	cd "$OPENWRT_ROOT" && make defconfig #&& make -j4
 }
 
