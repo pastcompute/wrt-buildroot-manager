@@ -200,13 +200,40 @@ function do_make() {
   do_world
 }
 
+function kernel_config_merge() {
+  validate_project_file
+  source "$PROJECT_FILE" && validate_project_settings
+
+  if test -e "$CUSTOM_KERNEL_CONF_MERGE" ; then
+    echo "Merging $CUSTOM_KERNEL_CONF_MERGE"
+    while read line; do
+      # line starting with minus, remove from conf if present, otherwise, append it if not already there
+      _kconf=$OPENWRT_ROOT/target/linux/$KERNEL_CONFIG
+      _remove="${line##-}"
+      _comment="${line###}"
+      if [ "$_comment" == "$line" ] ; then
+        if [ "$_remove" == "$line" ] ; then
+          #echo "Append $line"
+          grep -q "$line" $_kconf || echo "$line" >> $_kconf
+        else
+          #echo "Remove $line"
+          grep -q "$_remove" $_kconf && sed -i -e '/'"$_remove"'/d' $_kconf
+        fi
+      fi
+    done < "$CUSTOM_KERNEL_CONF_MERGE"
+    cd "$OLDPWD"
+  fi
+}
+
 function do_configup {
   DIR=`pwd`
 
   validate_project_file
   source "$PROJECT_FILE" && validate_project_settings
 	cp "$CUSTOM_CONFIG" "$OPENWRT_ROOT"/.config
-	cd "$OPENWRT_ROOT" && make defconfig #&& make -j4
+	( cd "$OPENWRT_ROOT" && make defconfig ) #&& make -j4 
+
+  kernel_config_merge
 }
 
 #
