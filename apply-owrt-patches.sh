@@ -1,7 +1,7 @@
 # Apply OpenWRT patches on stock kernel
 
-OWRT_SOURCES=/scratch/develop/wbm-c3/openwrt
-TAG=v3.14.25
+OWRT_SOURCES=/scratch/develop/openwrt.trunk
+TAG=v3.14.26
 
 set -e
 set -x
