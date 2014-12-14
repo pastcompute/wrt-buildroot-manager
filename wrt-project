@@ -208,7 +208,7 @@ function kernel_config_merge() {
     echo "Merging $CUSTOM_KERNEL_CONF_MERGE"
     while read line; do
       # line starting with minus, remove from conf if present, otherwise, append it if not already there
-      _kconf=$OPENWRT_ROOT/target/linux/$KERNEL_CONFIG
+      _kconf=$OPENWRT_ROOT/target/linux/$KERNEL_PLATFORM/$KERNEL_CONFIG
       _remove="${line##-}"
       _comment="${line###}"
       if [ "$_comment" == "$line" ] ; then
@@ -221,7 +221,9 @@ function kernel_config_merge() {
         fi
       fi
     done < "$CUSTOM_KERNEL_CONF_MERGE"
-    cd "$OLDPWD"
+    test -z "$KERNEL_CMDLINE" || _cmdline="`echo \"${KERNEL_CMDLINE}\" | sed -e 's@/@\\/@g'`"
+set -x
+    test -z "$KERNEL_CMDLINE" || sed -i $OPENWRT_ROOT/target/linux/$KERNEL_PLATFORM/generic/config-default -e "/^CONFIG_CMDLINE/ s/CONFIG_CMDLINE=.*/CONFIG_CMDLINE=\"${_cmdline}\"/"
   fi
 }
 
